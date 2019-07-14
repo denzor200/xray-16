@@ -244,7 +244,7 @@ public:
     float get_length_sec() const { return fTimeTotal; }
 };
 
-inline void VerSndUnlocked() { VERIFY(!GEnv.Sound->i_locked()); }
+#define VER_SND_UNLOCKED() { VERIFY(!GEnv.Sound->i_locked()); }
 /*! \class ref_sound
 \brief Sound source + control
 
@@ -267,44 +267,58 @@ struct ref_sound
     CSound_UserDataPtr _g_userdata() { VERIFY(_p); return _p->g_userdata; }
 
     bool create(pcstr name, esound_type sound_type, int game_type, bool replaceWithNoSound = true)
-    { VerSndUnlocked(); return GEnv.Sound->create(*this, name, sound_type, game_type, replaceWithNoSound); }
+    {
+        VER_SND_UNLOCKED(); return GEnv.Sound->create(*this, name, sound_type, game_type, replaceWithNoSound); 
+    }
 
     void attach_tail(pcstr name)
-    { VerSndUnlocked(); GEnv.Sound->attach_tail(*this, name); }
+    {
+        VER_SND_UNLOCKED(); GEnv.Sound->attach_tail(*this, name); 
+    }
 
     void clone(const ref_sound& from, esound_type sound_type, int game_type)
-    { VerSndUnlocked(); GEnv.Sound->clone(*this, from, sound_type, game_type); }
+    {
+        VER_SND_UNLOCKED(); GEnv.Sound->clone(*this, from, sound_type, game_type); 
+    }
 
     void destroy()
-    { VerSndUnlocked(); GEnv.Sound->destroy(*this); }
+    {
+        VER_SND_UNLOCKED(); GEnv.Sound->destroy(*this); 
+    }
 
     void play(IGameObject* O, u32 flags = 0, float delay = 0.f)
-    { VerSndUnlocked(); GEnv.Sound->play(*this, O, flags, delay); }
+    {
+        VER_SND_UNLOCKED(); GEnv.Sound->play(*this, O, flags, delay); 
+    }
 
     void play_at_pos(IGameObject* O, const Fvector& pos, u32 flags = 0, float delay = 0.f)
-    { VerSndUnlocked(); GEnv.Sound->play_at_pos(*this, O, pos, flags, delay); }
+    {
+        VER_SND_UNLOCKED(); GEnv.Sound->play_at_pos(*this, O, pos, flags, delay); 
+    }
 
     void play_no_feedback(IGameObject* O, u32 flags = 0, float delay = 0.f, Fvector* pos = nullptr, float* vol = nullptr, float* freq = nullptr, Fvector2* range = nullptr)
-    { VerSndUnlocked(); GEnv.Sound->play_no_feedback(*this, O, flags, delay, pos, vol, freq, range); }
+    {
+        VER_SND_UNLOCKED(); GEnv.Sound->play_no_feedback(*this, O, flags, delay, pos, vol, freq, range); 
+    }
 
-    void stop()                           { VerSndUnlocked(); if (_feedback()) _feedback()->stop(false); }
-    void stop_deferred()                  { VerSndUnlocked(); if (_feedback()) _feedback()->stop(true ); }
+    void stop()                           { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->stop(false); }
+    void stop_deferred()                  { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->stop(true ); }
 
-    void set_position(const Fvector& pos) { VerSndUnlocked(); if (_feedback()) _feedback()->set_position(pos); }
-    void set_frequency(float freq)        { VerSndUnlocked(); if (_feedback()) _feedback()->set_frequency(freq); }
-    void set_range(float min, float max)  { VerSndUnlocked(); if (_feedback()) _feedback()->set_range(min, max); }
-    void set_volume(float vol)            { VerSndUnlocked(); if (_feedback()) _feedback()->set_volume(vol); }
-    void set_priority(float p)            { VerSndUnlocked(); if (_feedback()) _feedback()->set_priority(p); }
+    void set_position(const Fvector& pos) { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_position(pos); }
+    void set_frequency(float freq)        { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_frequency(freq); }
+    void set_range(float min, float max)  { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_range(min, max); }
+    void set_volume(float vol)            { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_volume(vol); }
+    void set_priority(float p)            { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_priority(p); }
 
     const CSound_params* get_params()
     {
-        VerSndUnlocked();
+        VER_SND_UNLOCKED();
         return _feedback() ? _feedback()->get_params() : 0;
     }
 
     void set_params(CSound_params* p)
     {
-        VerSndUnlocked();
+        VER_SND_UNLOCKED();
         CSound_emitter* const feedback = _feedback();
         if (feedback)
         {
