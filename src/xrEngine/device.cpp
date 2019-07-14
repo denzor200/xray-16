@@ -225,6 +225,28 @@ void CRenderDevice::SecondaryThreadProc(void* context)
     }
 }
 
+extern void SoundProcessorOnFrame();
+static constexpr DWORD SndThreadDT = 100;
+
+void CRenderDevice::SoundThreadProc(void* context)
+{
+    auto& device = *static_cast<CRenderDevice*>(context);
+    while (true)
+    {
+        //device.soundProcessFrame.Wait();
+        Sleep(SndThreadDT);
+        if (device.mt_bMustExit)
+        {
+            device.soundThreadExit.Set();
+            return;
+        }
+
+        SoundProcessorOnFrame();
+
+        device.soundFrameDone.Set();
+    }
+}
+
 #include "IGame_Level.h"
 void CRenderDevice::PreCache(u32 amount, bool b_draw_loadscreen, bool b_wait_user_input)
 {
@@ -545,12 +567,17 @@ void CRenderDevice::Run()
     GEnv.Render->MakeContextCurrent(true);
 
     seqAppEnd.Process();
-    
+
+    // join all child-threads..
+
     // renderProcessFrame.Set();
     // renderThreadExit.Wait();
     
     syncProcessFrame.Set();
     syncThreadExit.Wait();
+
+    // soundProcessFrame.Set();
+    soundThreadExit.Wait();
 }
 
 u32 app_inactive_time = 0;

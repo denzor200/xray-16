@@ -234,6 +234,7 @@ public:
 private:
     static void PrimaryThreadProc(void* context);
     static void SecondaryThreadProc(void* context);
+    static void SoundThreadProc(void* context);
     static void RenderThreadProc(void* context);
 
 public:
@@ -306,6 +307,7 @@ private:
     Event primaryProcessFrame, primaryFrameDone, primaryThreadExit; // Primary thread events
     Event syncProcessFrame, syncFrameDone, syncThreadExit; // Secondary thread events
     Event renderProcessFrame, renderFrameDone, renderThreadExit; // Render thread events
+    Event /*soundProcessFrame,*/ soundFrameDone, soundThreadExit; // Sound thread events
 
 public:
     volatile BOOL mt_bMustExit;
