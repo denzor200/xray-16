@@ -193,14 +193,14 @@ public:
     virtual void feel_touch_new(IGameObject* O);
     virtual void feel_touch_delete(IGameObject* O);
     void on_ownership_reject(IGameObject* O, bool just_before_destroy);
-    virtual void renderable_Render();
+    void renderable_Render(IRenderable* root) override;
     virtual void Exec_Look(float dt);
     virtual void Hit(SHit* pHDS);
     virtual void PHHit(SHit& H);
     virtual bool feel_vision_isRelevant(IGameObject* who);
     virtual float Radius() const;
 #ifdef DEBUG
-    virtual void OnHUDDraw(CCustomHUD* hud);
+    void OnHUDDraw(CCustomHUD* hud, IRenderable* root) override;
     virtual void OnRender();
     void debug_text();
     bool m_dbg_hud_draw;
@@ -383,6 +383,7 @@ public:
     IC bool group_behaviour() const;
     virtual void update_range_fov(float& new_range, float& new_fov, float start_range, float start_fov);
     void __stdcall update_object_handler();
+    bool mt_object_handler_update_allowed() const;
     bool zoom_state() const;
     void react_on_grenades();
     void react_on_member_death();

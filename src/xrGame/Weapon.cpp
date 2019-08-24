@@ -411,7 +411,8 @@ void CWeapon::Load(LPCSTR section)
     else if (m_eScopeStatus == ALife::eAddonPermanent)
     {
         m_zoom_params.m_fScopeZoomFactor = pSettings->r_float(cNameSect(), "scope_zoom_factor");
-        if (!GEnv.isDedicatedServer)
+        // Xottab_DUTY: Let others can launch SOC without debugger
+        if (!GEnv.isDedicatedServer && !ShadowOfChernobylMode) // XXX: temporary check for SOC mode, to be removed
         {
             m_UIScope = new CUIWindow();
             if (!pWpnScopeXml)
@@ -867,7 +868,7 @@ void CWeapon::EnableActorNVisnAfterZoom()
 }
 
 bool CWeapon::need_renderable() { return !(IsZoomed() && ZoomTexture() && !IsRotatingToZoom()); }
-void CWeapon::renderable_Render()
+void CWeapon::renderable_Render(IRenderable* root)
 {
     UpdateXForm();
 
@@ -881,7 +882,7 @@ void CWeapon::renderable_Render()
     else
         RenderHud(TRUE);
 
-    inherited::renderable_Render();
+    inherited::renderable_Render(root);
 }
 
 void CWeapon::signal_HideComplete()

@@ -99,6 +99,10 @@ protected:
     CScriptBinder scriptBinder;
     bool m_bObjectRemoved;
     CInifile* m_ini_file;
+    bool m_client_updated{};
+#ifdef DEBUG
+    bool m_should_process_onrender{};
+#endif
 
 public:
     CGameObject();
@@ -219,6 +223,7 @@ public:
     // Methods
     virtual void Load(LPCSTR section) override;
     void PostLoad(LPCSTR section) override; //--#SM+#--
+    void PreUpdateCL() override;
     virtual void UpdateCL() override; // Called each frame, so no need for dt
     void PostUpdateCL(bool bUpdateCL_disabled) override; //--#SM+#--
     virtual void OnChangeVisual() override;
@@ -241,11 +246,11 @@ public:
     virtual u32 ps_Size() const override { return PositionStack.size(); }
     virtual GameObjectSavedPosition ps_Element(u32 ID) const override;
     virtual void ForceTransform(const Fmatrix& m) override {}
-    virtual void OnHUDDraw(CCustomHUD* hud) override {}
+    void OnHUDDraw(CCustomHUD* /*hud*/, IRenderable* /*root*/) override {}
     void OnRenderHUD(IGameObject* pCurViewEntity) override {} //--#SM+#--
     void OnOwnedCameraMove(CCameraBase* pCam, float fOldYaw, float fOldPitch) override  {} //--#SM+#--
     virtual BOOL Ready() override { return getReady(); } // update only if active and fully initialized by/for network
-    virtual void renderable_Render() override;
+    void renderable_Render(IRenderable* root) override;
     virtual void OnEvent(NET_Packet& P, u16 type) override;
     virtual void Hit(SHit* pHDS) override {}
     virtual void SetHitInfo(IGameObject* who, IGameObject* weapon, s16 element, Fvector Pos, Fvector Dir) override {}
@@ -277,6 +282,8 @@ public:
     virtual BOOL TestServerFlag(u32 Flag) const override;
     virtual bool can_validate_position_on_spawn() override { return true; }
 #ifdef DEBUG
+    bool ShouldProcessOnRender() const override { return m_should_process_onrender; }
+    void ShouldProcessOnRender(bool should_process) override { m_should_process_onrender = should_process; }
     virtual void OnRender() override;
 #endif
     virtual void reinit() override;

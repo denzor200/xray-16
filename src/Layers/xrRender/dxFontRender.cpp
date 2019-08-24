@@ -3,18 +3,19 @@
 #include "xrEngine/GameFont.h"
 #include "xrCore/Text/StringConversion.hpp"
 
-dxFontRender::dxFontRender() {}
 dxFontRender::~dxFontRender()
 {
     pShader.destroy();
     pGeom.destroy();
+
 }
 
-void dxFontRender::Initialize(LPCSTR cShader, LPCSTR cTexture)
+void dxFontRender::Initialize(cpcstr cShader, cpcstr cTexture)
 {
     pShader.create(cShader, cTexture);
     pGeom.create(FVF::F_TL, RCache.Vertex.Buffer(), RCache.QuadIB);
 }
+
 extern ENGINE_API BOOL g_bRendering;
 extern ENGINE_API Fvector2 g_current_font_scale;
 void dxFontRender::OnRender(CGameFont& owner)
@@ -93,12 +94,11 @@ void dxFontRender::OnRender(CGameFont& owner)
                     clr2 = color_rgba(_R, _G, _B, _A);
                 }
 
-#if defined(USE_DX10) || defined(USE_DX11) || \
-defined(USE_OGL) // Vertex shader will cancel a DX9 correction, so make fake offset
+#ifndef USE_DX9 // Vertex shader will cancel a DX9 correction, so make fake offset
                 X -= 0.5f;
                 Y -= 0.5f;
                 Y2 -= 0.5f;
-#endif // USE_DX10
+#endif // !USE_DX9
 
                 float tu, tv;
                 for (int j = 0; j < len; j++)
@@ -117,11 +117,11 @@ defined(USE_OGL) // Vertex shader will cancel a DX9 correction, so make fake off
                         //tv = (l.y / owner.vTS.y) + (0.5f / owner.vTS.y);
                         tu = (l.x / owner.vTS.x);
                         tv = (l.y / owner.vTS.y);
-#if !defined(USE_DX10) && !defined(USE_DX11) && !defined(USE_OGL)
+#ifdef USE_DX9
                         //  Make half pixel offset for 1 to 1 mapping
                         tu += (0.5f / owner.vTS.x);
                         tv += (0.5f / owner.vTS.y);
-#endif // USE_DX10
+#endif // USE_DX9
 
                         v->set(X, Y2, clr2, tu, tv + owner.fTCHeight);
                         v++;

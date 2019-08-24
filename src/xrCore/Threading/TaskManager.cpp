@@ -7,6 +7,8 @@
 
 #include <thread>
 
+#include <tbb/task_scheduler_init.h>
+
 xr_unique_ptr<TaskManagerBase> TaskScheduler;
 
 TaskManagerBase::TaskManagerBase() : taskerSleepTime(2), shouldStop(true) {}
@@ -17,8 +19,8 @@ void TaskManagerBase::Initialize()
         return;
 
     shouldStop = false;
-    thread_spawn(taskManagerThread, "X-Ray Task Scheduler thread", 0, this);
-    thread_spawn(taskWatcherThread, "X-Ray Task Watcher thread", 0, this);
+    Threading::SpawnThread(taskManagerThread, "X-Ray Task Scheduler thread", 0, this);
+    Threading::SpawnThread(taskWatcherThread, "X-Ray Task Watcher thread", 0, this);
 }
 
 void TaskManagerBase::Destroy()
@@ -38,6 +40,11 @@ bool TaskManagerBase::TaskQueueIsEmpty() const
 
 void TaskManagerBase::taskManagerThread(void* thisPtr)
 {
+    int threads = tbb::task_scheduler_init::default_num_threads();
+    if (threads < 4)
+        threads = 4;
+    tbb::task_scheduler_init init(threads);
+
     TaskManagerBase& self = *static_cast<TaskManagerBase*>(thisPtr);
 
     while (!self.shouldStop)
@@ -143,7 +150,7 @@ void TaskManagerBase::taskWatcherThread(void* thisPtr)
 }
 
 void TaskManagerBase::AddTask(pcstr name, Task::Type type, Task::TaskFunc taskFunc,
-    Task::IsAllowedCallback callback, Task::DoneCallback done /*= nullptr*/)
+    Task::IsAllowedCallback callback /*= nullptr*/, Task::DoneCallback done /*= nullptr*/)
 {
     Task* task = new (tbb::task::allocate_root()) Task(name, type, taskFunc, callback, done);
 
@@ -152,18 +159,31 @@ void TaskManagerBase::AddTask(pcstr name, Task::Type type, Task::TaskFunc taskFu
     lock.Leave();
 }
 
+void TaskManagerBase::RemoveTask(Task::TaskFunc&& func)
+{
+    ScopeLock scope(&lock);
+
+    xr_vector<Task*>::iterator it;
+    const auto search = [&]()
+    {
+        it = std::find_if(tasks.begin(), tasks.end(), [&](Task* task)
+        {
+            return func == task->task;
+        });
+        return it;
+    };
+    if (search() != tasks.end())
+    {
+        Task::destroy(**it);
+        tasks.erase(it);
+    }
+}
+
 void TaskManagerBase::RemoveTasksWithName(pcstr name)
 {
     ScopeLock scope(&lock);
 
-    for (Task* task : tasks)
-    {
-        if (0 == xr_strcmp(name, task->GetName()))
-            Task::destroy(*task);
-    }
-
     xr_vector<Task*>::iterator it;
-
     const auto search = [&]()
     {
         it = std::find_if(tasks.begin(), tasks.end(), [&](Task* task)
@@ -175,6 +195,7 @@ void TaskManagerBase::RemoveTasksWithName(pcstr name)
 
     while (search() != tasks.end())
     {
+        Task::destroy(**it);
         tasks.erase(it);
     }
 }
@@ -183,14 +204,7 @@ void TaskManagerBase::RemoveTasksWithType(Task::Type type)
 {
     ScopeLock scope(&lock);
 
-    for (Task* task : tasks)
-    {
-        if (task->GetType() == type)
-            Task::destroy(*task);
-    }
-
     xr_vector<Task*>::iterator it;
-
     const auto search = [&]()
     {
         it = std::find_if(tasks.begin(), tasks.end(), [&](Task* task)
@@ -202,6 +216,7 @@ void TaskManagerBase::RemoveTasksWithType(Task::Type type)
 
     while (search() != tasks.end())
     {
+        Task::destroy(**it);
         tasks.erase(it);
     }
 }

@@ -17,10 +17,6 @@ public:
 class D3DXRenderBase : public IRender, public pureFrame
 {
 public:
-    IRenderable* val_pObject;
-    Fmatrix* val_pTransform;
-    BOOL val_bHUD;
-    BOOL val_bInvisible;
     BOOL val_bRecordMP; // record nearest for multi-pass
     R_feedback* val_feedback; // feedback for geometry being rendered
     u32 val_feedback_breakp; // breakpoint
@@ -83,14 +79,7 @@ public:
     RenderStatistics BasicStats;
 
 public:
-    virtual void set_Transform(Fmatrix* M) override
-    {
-        VERIFY(M);
-        val_pTransform = M;
-    }
-    virtual void set_HUD(BOOL V) override { val_bHUD = V; }
-    virtual BOOL get_HUD() override { return val_bHUD; }
-    virtual void set_Invisible(BOOL V) override { val_bInvisible = V; }
+    void set_Object(IRenderable* /*O*/) override { /* nothing here */ }
     void set_Feedback(R_feedback* V, u32 id)
     {
         val_feedback_breakp = id;
@@ -160,8 +149,15 @@ public:
         pmask_wmark = _wm;
     }
 
-    void r_dsgraph_insert_dynamic(dxRender_Visual* pVisual, Fvector& Center);
+protected:
+    void add_Static(dxRender_Visual* pVisual, const CFrustum& view, u32 planes);
+    void add_leafs_Dynamic(IRenderable* root, dxRender_Visual* pVisual, Fmatrix& xform); // if detected node's full visibility
+    void add_leafs_Static(dxRender_Visual* pVisual); // if detected node's full visibility
+
+public:
+    void r_dsgraph_insert_dynamic(IRenderable* root, dxRender_Visual* pVisual, Fmatrix& xform, Fvector& Center);
     void r_dsgraph_insert_static(dxRender_Visual* pVisual);
+
     // render primitives
     void r_dsgraph_render_graph(u32 _priority);
     void r_dsgraph_render_hud();

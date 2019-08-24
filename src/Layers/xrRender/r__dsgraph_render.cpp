@@ -525,7 +525,6 @@ void D3DXRenderBase::r_dsgraph_render_subspace(IRender_Sector* _sector, CFrustum
     // Save and build new frustum, disable HOM
     CFrustum ViewSave = ViewBase;
     ViewBase = *_frustum;
-    View = &ViewBase;
 
     if (_precise_portals && RImplementation.rmPortals)
     {
@@ -555,8 +554,7 @@ void D3DXRenderBase::r_dsgraph_render_subspace(IRender_Sector* _sector, CFrustum
             dxRender_Visual* root = sector->root();
             for (u32 v_it = 0; v_it < sector->r_frustums.size(); v_it++)
             {
-                set_Frustum(&(sector->r_frustums[v_it]));
-                add_Geometry(root);
+                add_Geometry(root, sector->r_frustums[v_it]);
             }
         }
     }
@@ -579,8 +577,8 @@ void D3DXRenderBase::r_dsgraph_render_subspace(IRender_Sector* _sector, CFrustum
                 continue; // inactive (untouched) sector
             for (u32 v_it = 0; v_it < sector->r_frustums.size(); v_it++)
             {
-                set_Frustum(&(sector->r_frustums[v_it]));
-                if (!View->testSphere_dirty(spatial->GetSpatialData().sphere.P, spatial->GetSpatialData().sphere.R))
+                const CFrustum& view = sector->r_frustums[v_it];
+                if (!view.testSphere_dirty(spatial->GetSpatialData().sphere.P, spatial->GetSpatialData().sphere.R))
                     continue;
 
                 // renderable
@@ -588,18 +586,13 @@ void D3DXRenderBase::r_dsgraph_render_subspace(IRender_Sector* _sector, CFrustum
                 if (nullptr == renderable)
                     continue; // unknown, but renderable object (r1_glow???)
 
-                renderable->renderable_Render();
+                renderable->renderable_Render(renderable);
             }
         }
-#if RENDER != R_R1
-        if (g_pGameLevel && (phase == RImplementation.PHASE_SMAP) && ps_actor_shadow_flags.test(RFLAG_ACTOR_SHADOW))
-            g_hud->Render_Actor_Shadow(); // Actor Shadow
-#endif
     }
 
     // Restore
     ViewBase = ViewSave;
-    View = nullptr;
 }
 
 #include "SkeletonCustom.h"

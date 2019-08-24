@@ -303,11 +303,12 @@ private:
     std::atomic<bool> precacheWhileReset;
     std::atomic<bool> mtProcessingAllowed;
     Event deviceCreated, deviceReadyToRun;
-    Event primaryProcessFrame, primaryFrameDone, primaryThreadExit; // Primary thread events
+    Event primaryReadyToRun, primaryProcessFrame, primaryFrameDone, primaryThreadExit; // Primary thread events
     Event syncProcessFrame, syncFrameDone, syncThreadExit; // Secondary thread events
     Event renderProcessFrame, renderFrameDone, renderThreadExit; // Render thread events
 
 public:
+    Event PresentationFinished = nullptr;
     volatile BOOL mt_bMustExit;
 
     bool IsMTProcessingAllowed()

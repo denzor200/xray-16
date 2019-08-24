@@ -31,7 +31,6 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
             std::sort(lstRenderables.begin(), lstRenderables.end(), pred_sp_sort);
 
             // Determine visibility for dynamic part of scene
-            set_Object(0);
             u32 uID_LTRACK = 0xffffffff;
             if (phase == PHASE_NORMAL)
             {
@@ -76,8 +75,7 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
             dxRender_Visual* root = sector->root();
             for (u32 v_it = 0; v_it < sector->r_frustums.size(); v_it++)
             {
-                set_Frustum(&(sector->r_frustums[v_it]));
-                add_Geometry(root);
+                add_Geometry(root, sector->r_frustums[v_it]);
             }
         }
 
@@ -133,9 +131,7 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
                         break; // exit loop on frustums
 
                     // Rendering
-                    set_Object(renderable);
-                    renderable->renderable_Render();
-                    set_Object(0);
+                    renderable->renderable_Render(renderable);
                 }
                 break; // exit loop on frustums
             }
@@ -145,7 +141,6 @@ void CRender::render_main(Fmatrix& m_ViewProjection, bool _fportals)
     }
     else
     {
-        set_Object(0);
         if (g_pGameLevel && (phase == PHASE_NORMAL))
             g_hud->Render_Last(); // HUD
     }
@@ -235,7 +230,6 @@ void CRender::Render()
 
     // HOM
     ViewBase.CreateFromMatrix(Device.mFullTransform, FRUSTUM_P_LRTB + FRUSTUM_P_FAR);
-    View = 0;
     if (!ps_r2_ls_flags.test(R2FLAG_EXP_MT_CALC))
     {
         HOM.Enable();

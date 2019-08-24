@@ -217,10 +217,9 @@ void attachable_hud_item::setup_firedeps(firedeps& fd)
 }
 
 bool attachable_hud_item::need_renderable() { return m_parent_hud_item->need_renderable(); }
-void attachable_hud_item::render()
+void attachable_hud_item::render(IRenderable* root)
 {
-    GEnv.Render->set_Transform(&m_item_transform);
-    GEnv.Render->add_Visual(m_model->dcast_RenderVisual());
+    GEnv.Render->add_Visual(root, m_model->dcast_RenderVisual(), m_item_transform);
     debug_draw_firedeps();
     m_parent_hud_item->render_hud_mode();
 }
@@ -507,7 +506,7 @@ void player_hud::render_item_ui()
         m_attached_items[1]->render_item_ui();
 }
 
-void player_hud::render_hud()
+void player_hud::render_hud(IRenderable* root)
 {
     if (!m_attached_items[0] && !m_attached_items[1])
         return;
@@ -518,14 +517,13 @@ void player_hud::render_hud()
     if (!b_r0 && !b_r1)
         return;
 
-    GEnv.Render->set_Transform(&m_transform);
-    GEnv.Render->add_Visual(m_model->dcast_RenderVisual());
+    GEnv.Render->add_Visual(root, m_model->dcast_RenderVisual(), m_transform);
 
     if (m_attached_items[0])
-        m_attached_items[0]->render();
+        m_attached_items[0]->render(root);
 
     if (m_attached_items[1])
-        m_attached_items[1]->render();
+        m_attached_items[1]->render(root);
 }
 
 #include "xrCore/Animation/Motion.hpp"
@@ -539,7 +537,7 @@ u32 player_hud::motion_length(const shared_str& anim_name, const shared_str& hud
         return 100; // ms TEMPORARY
     R_ASSERT2(pm,
         make_string("hudItem model [%s] has no motion with alias [%s]", hud_name.c_str(), anim_name.c_str()).c_str());
-    return motion_length(pm->m_animations[0].mid, md, speed, reinterpret_cast<IKinematicsAnimated*>(pi->m_model));
+    return motion_length(pm->m_animations[0].mid, md, speed, smart_cast<IKinematicsAnimated*>(pi->m_model));
 }
 
 u32 player_hud::motion_length(const MotionID& M, const CMotionDef*& md, float speed, IKinematicsAnimated* itemModel)

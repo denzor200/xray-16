@@ -152,6 +152,8 @@ void CRender::reset_end()
 
 void CRender::BeforeFrame()
 {
+    if (IGame_Persistent::MainMenuActiveOrLevelNotExist())
+        return;
     // MT-HOM (@front)
     TaskScheduler->AddTask("CHOM::MT_RENDER", Task::Type::Renderer,
         { &HOM, &CHOM::MT_RENDER },
@@ -161,13 +163,14 @@ void CRender::BeforeFrame()
 void CRender::OnFrame()
 {
     Models->DeleteQueue();
-
+    if (IGame_Persistent::MainMenuActiveOrLevelNotExist())
+        return;
     if (ps_r2_ls_flags.test(R2FLAG_EXP_MT_CALC))
     {
         // MT-details (@front)
         TaskScheduler->AddTask("CDetailManager::MT_CALC", Task::Type::Renderer,
             { Details, &CDetailManager::MT_CALC },
-            { &Device, &CRenderDevice::IsMTProcessingAllowed });
+            { &HOM, &CHOM::MT_Synced });
     }
 }
 
@@ -308,8 +311,15 @@ void CRender::flush() { r_dsgraph_render_graph(0); }
 BOOL CRender::occ_visible(vis_data& P) { return HOM.visible(P); }
 BOOL CRender::occ_visible(sPoly& P) { return HOM.visible(P); }
 BOOL CRender::occ_visible(Fbox& P) { return HOM.visible(P); }
-void CRender::add_Visual(IRenderVisual* V) { add_leafs_Dynamic((dxRender_Visual*)V); }
-void CRender::add_Geometry(IRenderVisual* V) { add_Static((dxRender_Visual*)V, View->getMask()); }
+void CRender::add_Visual(IRenderable* root, IRenderVisual* V, Fmatrix& m)
+{
+    set_Object(root);
+    add_leafs_Dynamic(root, (dxRender_Visual*)V, m);
+}
+void CRender::add_Geometry(IRenderVisual* V, const CFrustum& view)
+{
+    add_Static((dxRender_Visual*)V, view, view.getMask());
+}
 void CRender::add_StaticWallmark(ref_shader& S, const Fvector& P, float s, CDB::TRI* T, Fvector* verts)
 {
     if (T->suppress_wm)
@@ -352,8 +362,7 @@ void CRender::add_Occluder(Fbox2& bb_screenspace) { HOM.occlude(bb_screenspace);
 #include "xrEngine/PS_instance.h"
 void CRender::set_Object(IRenderable* O)
 {
-    val_pObject = O; // NULL is OK, trust me :)
-    if (val_pObject)
+    if (O)
     {
         VERIFY(dynamic_cast<IGameObject*>(O) || dynamic_cast<CPS_Instance*>(O));
         if (O->GetRenderData().pROS)
@@ -471,7 +480,7 @@ void CRender::Calculate()
 
     // Frustum & HOM rendering
     ViewBase.CreateFromMatrix(Device.mFullTransform, FRUSTUM_P_LRTB | FRUSTUM_P_FAR);
-    View = nullptr;
+
     if (!ps_r2_ls_flags.test(R2FLAG_EXP_MT_CALC))
     {
         HOM.Enable();
@@ -527,8 +536,7 @@ void CRender::Calculate()
                 dxRender_Visual* root = sector->root();
                 for (u32 v_it = 0; v_it < sector->r_frustums.size(); v_it++)
                 {
-                    set_Frustum(&(sector->r_frustums[v_it]));
-                    add_Geometry(root);
+                    add_Geometry(root, sector->r_frustums[v_it]);
                 }
             }
         }
@@ -578,9 +586,9 @@ void CRender::Calculate()
                 {
                     for (u32 v_it = 0; v_it < sector->r_frustums.size(); v_it++)
                     {
-                        set_Frustum(&(sector->r_frustums[v_it]));
+                        const CFrustum& view = sector->r_frustums[v_it];
 
-                        if (!View->testSphere_dirty(spatial->GetSpatialData().sphere.P,
+                        if (!view.testSphere_dirty(spatial->GetSpatialData().sphere.P,
                                 spatial->GetSpatialData().sphere.R) /*&& (spatial->spatial.type & STYPE_RENDERABLE)*/)
                             continue;
                         // renderable
@@ -619,8 +627,7 @@ void CRender::Calculate()
                                 CROS_impl* T = (CROS_impl*)renderable->renderable_ROS();
                                 T->update(renderable);
                             }
-                            set_Object(renderable);
-                            renderable->renderable_Render();
+                            renderable->renderable_Render(renderable);
                             set_Object(nullptr); //? is it needed at all
                         }
                         break; // exit loop on frustums

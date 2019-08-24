@@ -2,6 +2,24 @@
 
 #include "ResourceManager.h"
 
+#ifdef USE_OGL
+template<GLenum type>
+inline std::pair<GLuint, GLuint> GLCreateShader(pcstr* buffer, size_t size, pcstr name)
+{
+    GLuint shader = glCreateShader(type);
+    R_ASSERT(shader);
+    CHK_GL(glShaderSource(shader, size, buffer, nullptr));
+    CHK_GL(glCompileShader(shader));
+
+    GLuint program = glCreateProgram();
+    R_ASSERT(program);
+    CHK_GL(glObjectLabel(GL_PROGRAM, program, -1, name));
+    CHK_GL(glProgramParameteri(program, GL_PROGRAM_SEPARABLE, (GLint)GL_TRUE));
+
+    return { shader, program };
+}
+#endif
+
 template <typename T>
 struct ShaderTypeTraits;
 
@@ -12,42 +30,79 @@ struct ShaderTypeTraits<SVS>
 
 #ifdef USE_OGL
     using HWShaderType = GLuint;
+    using BufferType = pcstr*;
+    using ResultType = std::pair<GLuint, GLuint>;
 #else
     using HWShaderType = ID3DVertexShader*;
+    using BufferType = DWORD const*;
+    using ResultType = HRESULT;
 #endif
 
     static inline const char* GetShaderExt() { return ".vs"; }
+
     static inline const char* GetCompilationTarget()
     {
-        return "vs_2_0";
+#ifdef USE_DX9
+        return D3DXGetVertexShaderProfile(HW.pDevice); // vertex "vs_2_a";
+#endif
+#ifdef USE_DX10
+        if (HW.pDevice1 == nullptr)
+            return D3D10GetVertexShaderProfile(HW.pDevice);
+        else
+            return "vs_4_1";
+#endif
+#ifdef USE_DX11
+        switch (HW.FeatureLevel)
+        {
+        case D3D_FEATURE_LEVEL_10_0:
+            return "vs_4_0";
+        case D3D_FEATURE_LEVEL_10_1:
+            return "vs_4_1";
+        case D3D_FEATURE_LEVEL_11_0:
+            return "vs_5_0";
+        case D3D_FEATURE_LEVEL_11_1:
+#ifdef HAS_DX11_3
+            if (HW.pDevice3)
+                return "vs_5_1";
+#endif
+            return "vs_5_0";
+        }
+#endif
+        if (HW.Caps.geometry_major >= 2)
+            return "vs_2_0";
+
+        return "vs_1_1";
     }
 
     static void GetCompilationTarget(const char*& target, const char*& entry, const char* data)
     {
-        if (HW.Caps.geometry_major >= 2)
-            target = "vs_2_0";
-        else
-            target = "vs_1_1";
+        entry = "main";
 
         if (strstr(data, "main_vs_1_1"))
         {
             target = "vs_1_1";
             entry = "main_vs_1_1";
         }
-
-        if (strstr(data, "main_vs_2_0"))
+        else if (strstr(data, "main_vs_2_0"))
         {
             target = "vs_2_0";
             entry = "main_vs_2_0";
         }
+#ifdef USE_DX9 // For DX10+ we always should use SM4.0 or higher
+        else
+#endif
+        {
+            target = GetCompilationTarget();
+        }
     }
 
-    static inline HRESULT CreateHWShader(DWORD const* buffer, size_t size, HWShaderType& sh)
+    static inline ResultType CreateHWShader(BufferType buffer, size_t size, HWShaderType& sh,
+        pcstr name = nullptr)
     {
-        HRESULT res = 0;
+        ResultType res{};
 
 #ifdef USE_OGL
-        sh = glCreateShader(GL_VERTEX_SHADER);
+        res = GLCreateShader<GL_VERTEX_SHADER>(buffer, size, name);
 #elif defined(USE_DX11)
         res = HW.pDevice->CreateVertexShader(buffer, size, 0, &sh);
 #elif defined(USE_DX10)
@@ -69,51 +124,91 @@ struct ShaderTypeTraits<SPS>
 
 #ifdef USE_OGL
     using HWShaderType = GLuint;
+    using BufferType = pcstr*;
+    using ResultType = std::pair<GLuint, GLuint>;
 #else
     using HWShaderType = ID3DPixelShader*;
+    using BufferType = DWORD const*;
+    using ResultType = HRESULT;
 #endif
 
     static inline const char* GetShaderExt() { return ".ps"; }
+
     static inline const char* GetCompilationTarget()
     {
+#ifdef USE_DX9
+        return D3DXGetPixelShaderProfile(HW.pDevice); // pixel "ps_2_a";
+#endif
+#ifdef USE_DX10
+        if (HW.pDevice1 == nullptr)
+            return D3D10GetPixelShaderProfile(HW.pDevice);
+        else
+            return "ps_4_1";
+#endif
+#ifdef USE_DX11
+        switch (HW.FeatureLevel)
+        {
+        case D3D_FEATURE_LEVEL_10_0:
+            return "ps_4_0";
+        case D3D_FEATURE_LEVEL_10_1:
+            return "ps_4_1";
+        case D3D_FEATURE_LEVEL_11_0:
+            return "ps_5_0";
+        case D3D_FEATURE_LEVEL_11_1:
+#ifdef HAS_DX11_3
+            if (HW.pDevice3)
+                return "ps_5_1";
+#endif
+            return "ps_5_0";
+        }
+#endif // USE_DX11
+
         return "ps_2_0";
     }
 
     static void GetCompilationTarget(const char*& target, const char*& entry, const char* data)
     {
+        entry = "main";
         if (strstr(data, "main_ps_1_1"))
         {
             target = "ps_1_1";
             entry = "main_ps_1_1";
         }
-        if (strstr(data, "main_ps_1_2"))
+        else if (strstr(data, "main_ps_1_2"))
         {
             target = "ps_1_2";
             entry = "main_ps_1_2";
         }
-        if (strstr(data, "main_ps_1_3"))
+        else if (strstr(data, "main_ps_1_3"))
         {
             target = "ps_1_3";
             entry = "main_ps_1_3";
         }
-        if (strstr(data, "main_ps_1_4"))
+        else if (strstr(data, "main_ps_1_4"))
         {
             target = "ps_1_4";
             entry = "main_ps_1_4";
         }
-        if (strstr(data, "main_ps_2_0"))
+        else if (strstr(data, "main_ps_2_0"))
         {
             target = "ps_2_0";
             entry = "main_ps_2_0";
         }
+#ifdef USE_DX9 // For DX10+ we always should use SM4.0 or higher
+        else
+#endif
+        {
+            target = GetCompilationTarget();
+        }
     }
 
-    static inline HRESULT CreateHWShader(DWORD const* buffer, size_t size, HWShaderType& sh)
+    static inline ResultType CreateHWShader(BufferType buffer, size_t size, HWShaderType& sh,
+        pcstr name = nullptr)
     {
-        HRESULT res = 0;
+        ResultType res{};
 
 #ifdef USE_OGL
-        sh = glCreateShader(GL_FRAGMENT_SHADER);
+        res = GLCreateShader<GL_FRAGMENT_SHADER>(buffer, size, name);
 #elif defined(USE_DX11)
         res = HW.pDevice->CreatePixelShader(buffer, size, 0, &sh);
 #elif defined(USE_DX10)
@@ -136,12 +231,16 @@ struct ShaderTypeTraits<SGS>
 
 #ifdef USE_OGL
     using HWShaderType = GLuint;
+    using BufferType = pcstr*;
+    using ResultType = std::pair<GLuint, GLuint>;
 #else
     using HWShaderType = ID3DGeometryShader*;
+    using BufferType = DWORD const*;
+    using ResultType = HRESULT;
 #endif
 
-
     static inline const char* GetShaderExt() { return ".gs"; }
+
     static inline const char* GetCompilationTarget()
     {
 #ifdef USE_DX10
@@ -151,13 +250,22 @@ struct ShaderTypeTraits<SGS>
             return "gs_4_1";
 #endif
 #ifdef USE_DX11
-        if (HW.FeatureLevel == D3D_FEATURE_LEVEL_10_0)
+        switch (HW.FeatureLevel)
+        {
+        case D3D_FEATURE_LEVEL_10_0:
             return "gs_4_0";
-        else if (HW.FeatureLevel == D3D_FEATURE_LEVEL_10_1)
+        case D3D_FEATURE_LEVEL_10_1:
             return "gs_4_1";
-        else if (HW.FeatureLevel == D3D_FEATURE_LEVEL_11_0)
+        case D3D_FEATURE_LEVEL_11_0:
             return "gs_5_0";
+        case D3D_FEATURE_LEVEL_11_1:
+#ifdef HAS_DX11_3
+            if (HW.pDevice3)
+                return "gs_5_1";
 #endif
+            return "gs_5_0";
+        }
+#endif // USE_DX11
         NODEFAULT;
         return "gs_4_0";
     }
@@ -168,12 +276,13 @@ struct ShaderTypeTraits<SGS>
         entry = "main";
     }
 
-    static inline HRESULT CreateHWShader(DWORD const* buffer, size_t size, HWShaderType& sh)
+    static inline ResultType CreateHWShader(BufferType buffer, size_t size, HWShaderType& sh,
+        pcstr name = nullptr)
     {
-        HRESULT res = 0;
+        ResultType res{};
 
 #ifdef USE_OGL
-        sh = glCreateShader(GL_GEOMETRY_SHADER);
+        res = GLCreateShader<GL_GEOMETRY_SHADER>(buffer, size, name);
 #elif defined(USE_DX11)
         res = HW.pDevice->CreateGeometryShader(buffer, size, 0, &sh);
 #else
@@ -195,12 +304,34 @@ struct ShaderTypeTraits<SHS>
 
 #ifdef USE_OGL
     using HWShaderType = GLuint;
+    using BufferType = pcstr*;
+    using ResultType = std::pair<GLuint, GLuint>;
 #else
     using HWShaderType = ID3D11HullShader*;
+    using BufferType = DWORD const*;
+    using ResultType = HRESULT;
 #endif
 
     static inline const char* GetShaderExt() { return ".hs"; }
-    static inline const char* GetCompilationTarget() { return "hs_5_0"; }
+
+    static inline const char* GetCompilationTarget()
+    {
+#ifdef USE_DX11
+        switch (HW.FeatureLevel)
+        {
+        case D3D_FEATURE_LEVEL_11_0:
+            return "hs_5_0";
+        case D3D_FEATURE_LEVEL_11_1:
+#ifdef HAS_DX11_3
+            if (HW.pDevice3)
+                return "hs_5_1";
+#endif
+            return "hs_5_0";
+        }
+#endif // USE_DX11
+
+        return "hs_5_0";
+    }
 
     static void GetCompilationTarget(const char*& target, const char*& entry, const char* /*data*/)
     {
@@ -208,12 +339,13 @@ struct ShaderTypeTraits<SHS>
         entry = "main";
     }
 
-    static inline HRESULT CreateHWShader(DWORD const* buffer, size_t size, HWShaderType& sh)
+    static inline ResultType CreateHWShader(BufferType buffer, size_t size, HWShaderType& sh,
+        pcstr name = nullptr)
     {
-        HRESULT res = 0;
+        ResultType res{};
 
 #ifdef USE_OGL
-        sh = glCreateShader(GL_TESS_CONTROL_SHADER);
+        res = GLCreateShader<GL_TESS_CONTROL_SHADER>(buffer, size, name);
 #else
         res = HW.pDevice->CreateHullShader(buffer, size, NULL, &sh);
 #endif
@@ -231,12 +363,34 @@ struct ShaderTypeTraits<SDS>
 
 #ifdef USE_OGL
     using HWShaderType = GLuint;
+    using BufferType = pcstr*;
+    using ResultType = std::pair<GLuint, GLuint>;
 #else
     using HWShaderType = ID3D11DomainShader*;
+    using BufferType = DWORD const*;
+    using ResultType = HRESULT;
 #endif
 
     static inline const char* GetShaderExt() { return ".ds"; }
-    static inline const char* GetCompilationTarget() { return "ds_5_0"; }
+
+    static inline const char* GetCompilationTarget()
+    {
+#ifdef USE_DX11
+        switch (HW.FeatureLevel)
+        {
+        case D3D_FEATURE_LEVEL_11_0:
+            return "ds_5_0";
+        case D3D_FEATURE_LEVEL_11_1:
+#ifdef HAS_DX11_3
+            if (HW.pDevice3)
+                return "ds_5_1";
+#endif
+            return "ds_5_0";
+        }
+#endif // USE_DX11
+
+        return "ds_5_0";
+    }
 
     static void GetCompilationTarget(const char*& target, const char*& entry, const char* /*data*/)
     {
@@ -244,12 +398,13 @@ struct ShaderTypeTraits<SDS>
         entry = "main";
     }
 
-    static inline HRESULT CreateHWShader(DWORD const* buffer, size_t size, HWShaderType& sh)
+    static inline ResultType CreateHWShader(BufferType buffer, size_t size, HWShaderType& sh,
+        pcstr name = nullptr)
     {
-        HRESULT res = 0;
+        ResultType res{};
 
 #ifdef USE_OGL
-        sh = glCreateShader(GL_TESS_EVALUATION_SHADER);
+        res = GLCreateShader<GL_TESS_EVALUATION_SHADER>(buffer, size, name);
 #else
         res = HW.pDevice->CreateDomainShader(buffer, size, NULL, &sh);
 #endif
@@ -267,12 +422,38 @@ struct ShaderTypeTraits<SCS>
 
 #ifdef USE_OGL
     using HWShaderType = GLuint;
+    using BufferType = pcstr*;
+    using ResultType = std::pair<GLuint, GLuint>;
 #else
     using HWShaderType = ID3D11ComputeShader*;
+    using BufferType = DWORD const*;
+    using ResultType = HRESULT;
 #endif
 
     static inline const char* GetShaderExt() { return ".cs"; }
-    static inline const char* GetCompilationTarget() { return "cs_5_0"; }
+
+    static inline const char* GetCompilationTarget()
+    {
+#ifdef USE_DX11
+        switch (HW.FeatureLevel)
+        {
+        case D3D_FEATURE_LEVEL_10_0:
+            return "cs_4_0";
+        case D3D_FEATURE_LEVEL_10_1:
+            return "cs_4_1";
+        case D3D_FEATURE_LEVEL_11_0:
+            return "cs_5_0";
+        case D3D_FEATURE_LEVEL_11_1:
+#ifdef HAS_DX11_3
+            if (HW.pDevice3)
+                return "cs_5_1";
+#endif
+            return "cs_5_0";
+        }
+#endif // USE_DX11
+
+        return "cs_5_0";
+    }
 
     static void GetCompilationTarget(const char*& target, const char*& entry, const char* /*data*/)
     {
@@ -280,12 +461,13 @@ struct ShaderTypeTraits<SCS>
         entry = "main";
     }
 
-    static inline HRESULT CreateHWShader(DWORD const* buffer, size_t size, HWShaderType& sh)
+    static inline ResultType CreateHWShader(BufferType buffer, size_t size, HWShaderType& sh,
+        pcstr name = nullptr)
     {
-        HRESULT res = 0;
+        ResultType res{};
         
 #ifdef USE_OGL
-        sh = glCreateShader(GL_COMPUTE_SHADER);
+        res = GLCreateShader<GL_COMPUTE_SHADER>(buffer, size, name);
 #else
         res = HW.pDevice->CreateComputeShader(buffer, size, NULL, &sh);
 #endif
@@ -339,7 +521,7 @@ inline CResourceManager::map_CS& CResourceManager::GetShaderMap()
 
 template <typename T>
 T* CResourceManager::CreateShader(cpcstr name, pcstr filename /*= nullptr*/,
-    pcstr fallbackShader /*= nullptr*/, const bool searchForEntryAndTarget /*= false*/)
+    pcstr fallbackShader /*= nullptr*/)
 {
     typename ShaderTypeTraits<T>::MapType& sh_map = GetShaderMap<typename ShaderTypeTraits<T>::MapType>();
     LPSTR N = LPSTR(name);
@@ -406,11 +588,8 @@ T* CResourceManager::CreateShader(cpcstr name, pcstr filename /*= nullptr*/,
         data[size] = 0;
 
         // Select target
-        LPCSTR c_target = ShaderTypeTraits<T>::GetCompilationTarget();
-        LPCSTR c_entry = "main";
-        
-        if (searchForEntryAndTarget)
-            ShaderTypeTraits<T>::GetCompilationTarget(c_target, c_entry, data);
+        pcstr c_target, c_entry;
+        ShaderTypeTraits<T>::GetCompilationTarget(c_target, c_entry, data);
 
 #ifdef USE_OGL
         DWORD flags = 0;

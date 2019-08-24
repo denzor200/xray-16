@@ -59,16 +59,17 @@ void CHUDManager::Render_First()
     if (0 == O)
         return;
     CActor* A = smart_cast<CActor*>(O);
-    if (!A)
-        return;
-    if (A && !A->HUDview())
+    if (!A || !A->HUDview())
         return;
 
-    // only shadow
-    GEnv.Render->set_Invisible(TRUE);
-    GEnv.Render->set_Object(O->H_Root());
-    O->renderable_Render();
-    GEnv.Render->set_Invisible(FALSE);
+    // On R1 render only shadow
+    // On R2+ render everything
+    O->renderable_Invisible(GEnv.CurrentRenderer == 1);
+
+    O->renderable_Render(O->H_Root());
+    GEnv.Render->set_Object(nullptr);
+
+    O->renderable_Invisible(false);
 }
 
 bool need_render_hud()
@@ -102,27 +103,10 @@ void CHUDManager::Render_Last()
 
     IGameObject* O = g_pGameLevel->CurrentViewEntity();
     // hud itself
-    GEnv.Render->set_HUD(TRUE);
-    GEnv.Render->set_Object(O->H_Root());
-    O->OnHUDDraw(this);
-    GEnv.Render->set_HUD(FALSE);
-}
-
-void CHUDManager::Render_Actor_Shadow() // added by KD
-{
-    if (pUIGame == nullptr) return;
-
-    auto object = g_pGameLevel->CurrentViewEntity();
-    if (object == nullptr) return;
-
-    auto actor = smart_cast<CActor*>(object);
-    if (!actor) return;
-
-    // KD: we need to render actor shadow only in first eye cam mode because
-    // in other modes actor model already in scene graph and renders well
-    if (actor->active_cam() != eacFirstEye) return;
-    GEnv.Render->set_Object(object->H_Root());
-    object->renderable_Render();
+    O->renderable_HUD(true);
+    O->OnHUDDraw(this, O->H_Root());
+    O->renderable_HUD(false);
+    GEnv.Render->set_Object(nullptr);
 }
 
 #include "player_hud.h"
@@ -203,7 +187,7 @@ void CHUDManager::HitMarked(int idx, float power, const Fvector& dir)
 {
     HitMarker.Hit(dir);
     clamp(power, 0.0f, 1.0f);
-    pInput->feedback(u16(iFloor(u16(-1) * power)), u16(iFloor(u16(-1) * power)), 0.5f);
+    pInput->Feedback(u16(iFloor(u16(-1) * power)), u16(iFloor(u16(-1) * power)), 0.5f);
 }
 
 bool CHUDManager::AddGrenade_ForMark(CGrenade* grn) { return HitMarker.AddGrenade_ForMark(grn); }

@@ -964,13 +964,12 @@ void CActor::UpdateCL()
         {
             const bool allowed = psActorFlags.test(AF_MULTI_ITEM_PICKUP);
 
-            auto dik = get_action_dik(kUSE, 0);
-            if (dik && pInput->iGetAsyncKeyState(dik) && allowed)
-                m_bPickupMode = true;
-
-            dik = get_action_dik(kUSE, 1);
-            if (dik && pInput->iGetAsyncKeyState(dik) && allowed)
-                m_bPickupMode = true;
+            for (u8 i = 0; i < bindtypes_count && allowed; ++i)
+            {
+                const int dik = GetActionDik(kUSE, i);
+                if (dik && pInput->iGetAsyncKeyState(dik))
+                    m_bPickupMode = true;
+            }
         }
         else
         {
@@ -1425,10 +1424,10 @@ void CActor::shedule_Update(u32 DT)
     Check_for_AutoPickUp();
 };
 #include "debug_renderer.h"
-void CActor::renderable_Render()
+void CActor::renderable_Render(IRenderable* root)
 {
     VERIFY(_valid(XFORM()));
-    inherited::renderable_Render();
+    inherited::renderable_Render(root);
 
     if ((cam_active == eacFirstEye && // first eye cam
             GEnv.Render->get_generation() == GEnv.Render->GENERATION_R2 && // R2
@@ -1437,12 +1436,12 @@ void CActor::renderable_Render()
         !(IsFocused() && cam_active == eacFirstEye &&
             (!m_holder || (m_holder && m_holder->allowWeapon() && m_holder->HUDView())))
     )
-        CInventoryOwner::renderable_Render();
+        CInventoryOwner::renderable_Render(root);
 
 
     //if (1 /*!HUDview()*/)
     //{
-    //    CInventoryOwner::renderable_Render();
+    //    CInventoryOwner::renderable_Render(root);
     //}
     //VERIFY(_valid(XFORM()));
 }
@@ -1484,11 +1483,11 @@ bool CActor::use_default_throw_force()
 float CActor::missile_throw_force() { return 0.f; }
 
 // HUD
-void CActor::OnHUDDraw(CCustomHUD*)
+void CActor::OnHUDDraw(CCustomHUD* hud, IRenderable* root)
 {
     R_ASSERT(IsFocused());
     if (!((mstate_real & mcLookout) && !IsGameTypeSingle()))
-        g_player_hud->render_hud();
+        g_player_hud->render_hud(root);
 }
 
 void CActor::RenderIndicator(Fvector dpos, float r1, float r2, const ui_shader& IndShader)

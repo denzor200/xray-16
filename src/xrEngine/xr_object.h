@@ -127,7 +127,7 @@ public:
 // ~ISheduled
 // IRenderable
 // virtual RenderData &GetRenderData() override = 0;
-// virtual void renderable_Render() override = 0;
+// virtual void renderable_Render(IRenderable* root) override = 0;
 // virtual IRender_ObjectSpecific *renderable_ROS() override = 0;
 // virtual BOOL renderable_ShadowGenerate() override = 0;
 // virtual BOOL renderable_ShadowReceive() override = 0;
@@ -215,6 +215,7 @@ public:
     virtual void Load(LPCSTR section) = 0;
     virtual void PostLoad(LPCSTR section) = 0; //--#SM+#--
     // Update
+    virtual void PreUpdateCL() = 0;
     virtual void UpdateCL() = 0; // Called each frame, so no need for dt
     virtual void PostUpdateCL(bool bUpdateCL_disabled) = 0; //--#SM+#-- Вызывается всегда, в отличии от UpdateCL [called always for object regardless of it being active\sleep]
     // Position stack
@@ -222,7 +223,7 @@ public:
     virtual GameObjectSavedPosition ps_Element(u32 id) const = 0;
     virtual void ForceTransform(const Fmatrix& m) = 0;
     // HUD
-    virtual void OnHUDDraw(CCustomHUD* hud) = 0;
+    virtual void OnHUDDraw(CCustomHUD* hud, IRenderable* root) = 0;
     virtual void OnRenderHUD(IGameObject* pCurViewEntity) = 0; //--#SM+#--
     virtual void OnOwnedCameraMove(CCameraBase* pCam, float fOldYaw, float fOldPitch) = 0; //--#SM+#--
     // Active/non active
@@ -301,6 +302,8 @@ public:
     virtual BOOL TestServerFlag(u32 flag) const = 0;
     virtual bool can_validate_position_on_spawn() = 0;
 #ifdef DEBUG
+    virtual bool ShouldProcessOnRender() const = 0;
+    virtual void ShouldProcessOnRender(bool should_process) = 0;
     virtual void OnRender() = 0;
 #endif
     virtual void reinit() = 0;

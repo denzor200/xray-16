@@ -1073,13 +1073,12 @@ Fvector CGameObject::get_last_local_point_on_mesh(Fvector const& local_point, u1
     return result;
 }
 
-void CGameObject::renderable_Render()
+void CGameObject::renderable_Render(IRenderable* root)
 {
     //
     MakeMeCrow();
     // ~
-    GEnv.Render->set_Transform(&XFORM());
-    GEnv.Render->add_Visual(Visual());
+    GEnv.Render->add_Visual(root, Visual(), XFORM());
     Visual()->getVisData().hom_frame = Device.dwFrame;
 }
 
@@ -1397,7 +1396,8 @@ void CGameObject::UpdateCL()
     m_previous_matrix = XFORM();
 }
 
-void CGameObject::PostUpdateCL(bool bUpdateCL_disabled) {}
+void CGameObject::PreUpdateCL() { m_client_updated = false; }
+void CGameObject::PostUpdateCL(bool /*bUpdateCL_disabled*/) { m_client_updated = true;}
 
 void CGameObject::on_matrix_change(const Fmatrix& previous) { obstacle().on_move(); }
 #ifdef DEBUG

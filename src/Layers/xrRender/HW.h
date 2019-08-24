@@ -25,7 +25,11 @@ public:
     void DestroyD3D();
 #endif // !USE_OGL
 
-    void CreateDevice(SDL_Window* m_sdlWnd);
+    void CreateDevice(SDL_Window* sdlWnd);
+#if defined(USE_DX10) || defined(USE_DX11)
+    void CreateSwapChain(HWND hwnd);
+    bool CreateSwapChain2(HWND hwnd);
+#endif
 
     void DestroyDevice();
 
@@ -77,6 +81,14 @@ public:
     IDXGISwapChain* m_pSwapChain = nullptr;
     DXGI_SWAP_CHAIN_DESC m_ChainDesc; // DevPP equivalent
     D3D_FEATURE_LEVEL FeatureLevel;
+    bool ComputeShadersSupported;
+#ifdef HAS_DX11_2
+    IDXGIFactory2* m_pFactory2 = nullptr;
+    IDXGISwapChain2* m_pSwapChain2 = nullptr;
+#endif
+#ifdef HAS_DX11_3
+    ID3D11Device3* pDevice3 = nullptr;
+#endif
 #if defined(USE_DX10)
     ID3D10Device1* pDevice1 = nullptr;
     ID3D10Device1* pContext1 = nullptr;
@@ -106,6 +118,12 @@ public:
 #if defined(USE_DX10) || defined(USE_DX11)
     bool CheckFormatSupport(DXGI_FORMAT format, UINT feature) const;
     DXGI_FORMAT SelectFormat(D3D_FORMAT_SUPPORT feature, const DXGI_FORMAT formats[], size_t count) const;
+    template <size_t count>
+    inline DXGI_FORMAT SelectFormat(D3D_FORMAT_SUPPORT feature, const DXGI_FORMAT (&formats)[count]) const
+    {
+        return SelectFormat(feature, formats, count);
+    }
+    bool UsingFlipPresentationModel() const;
     virtual void OnAppActivate();
     virtual void OnAppDeactivate();
 #endif //	USE_DX10

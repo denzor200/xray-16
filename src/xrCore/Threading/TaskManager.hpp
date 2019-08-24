@@ -35,10 +35,10 @@ class XRCORE_API TaskManagerBase
     static void taskManagerThread(void* thisPtr);
     static void taskWatcherThread(void* thisPtr);
 
-    void SpawnTask(Task* task);
 
 protected:
     friend class Task;
+    virtual void SpawnTask(Task* task);
     virtual void TaskDone(Task* task, u64 executionTime);
 
 public:
@@ -50,8 +50,9 @@ public:
     bool TaskQueueIsEmpty() const;
 
     void AddTask(pcstr name, Task::Type type, Task::TaskFunc taskFunc,
-        Task::IsAllowedCallback callback, Task::DoneCallback done = nullptr);
+        Task::IsAllowedCallback callback = nullptr, Task::DoneCallback done = nullptr);
 
+    void RemoveTask(Task::TaskFunc&& func);
     void RemoveTasksWithName(pcstr name);
     void RemoveTasksWithType(Task::Type type);
 

@@ -38,7 +38,7 @@ void CObjectList::DumpStatistics(IGameFont& font, IPerformanceAlert* alert)
         alert->Print(font, "UpdateCL  > 3ms:  %3.1f", stats.Update.result);
 }
 
-CObjectList::CObjectList() : m_owner_thread_id(GetCurrentThreadId())
+CObjectList::CObjectList() : m_owner_thread_id(Threading::GetCurrThreadId())
 {
     statsFrame = u32(-1);
     ZeroMemory(map_NETID, 0xffff * sizeof(IGameObject*));
@@ -272,7 +272,10 @@ void CObjectList::Update(bool bForce)
             }
 
             for (IGameObject** i = b; i != e; ++i)
+            {
+                (*i)->PreUpdateCL();
                 SingleUpdate(*i);
+            }
 
             //--#SM+#-- PostUpdateCL для всех клиентских объектов [for crowed and non-crowed]
             for (auto& object : objects_active)

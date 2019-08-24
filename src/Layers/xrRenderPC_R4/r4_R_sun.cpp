@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "xrEngine/IGame_Persistent.h"
 #include "xrEngine/IRenderable.h"
+#include "xrEngine/CustomHUD.h"
 #include "Layers/xrRender/FBasicVisual.h"
 #include "xrCommon/math_funcs_inline.h"
 
@@ -440,8 +441,7 @@ void CRender::render_sun()
             CSector* S = (CSector*)Sectors[s];
             dxRender_Visual* root = S->root();
 
-            set_Frustum(&cull_frustum);
-            add_Geometry(root);
+            add_Geometry(root, cull_frustum);
         }
     }
     set_Recorder(NULL);
@@ -986,6 +986,10 @@ void CRender::render_sun_near()
         //		fuckingsun->svis.begin					();
     }
 
+    // Actor Shadow
+    if (psDeviceFlags.test(rsDrawDynamic))
+        g_hud->Render_First();
+
     // Fill the database
     r_dsgraph_render_subspace(cull_sector, &cull_frustum, cull_xform, cull_COP, TRUE);
 
@@ -1004,7 +1008,7 @@ void CRender::render_sun_near()
             RCache.set_xform_view(Fidentity);
             RCache.set_xform_project(fuckingsun->X.D.combine);
             r_dsgraph_render_graph(0);
-            if (ps_r2_ls_flags.test(R2FLAG_DETAIL_SHADOW))
+            if (ps_r2_ls_flags.test(R2FLAG_SUN_DETAILS))
                 Details->Render();
             fuckingsun->X.D.transluent = FALSE;
             if (bSpecial)
@@ -1325,6 +1329,10 @@ void CRender::render_sun_cascade(u32 cascade_ind)
         //		fuckingsun->svis.begin					();
     }
 
+    // Actor Shadow
+    if (cascade_ind == 0 && psDeviceFlags.test(rsDrawDynamic))
+        g_hud->Render_First();
+
     // Fill the database
     r_dsgraph_render_subspace(cull_sector, &cull_frustum, cull_xform, cull_COP, TRUE);
 
@@ -1343,7 +1351,7 @@ void CRender::render_sun_cascade(u32 cascade_ind)
             RCache.set_xform_view(Fidentity);
             RCache.set_xform_project(fuckingsun->X.D.combine);
             r_dsgraph_render_graph(0);
-            if (ps_r2_ls_flags.test(R2FLAG_DETAIL_SHADOW))
+            if (ps_r2_ls_flags.test(R2FLAG_SUN_DETAILS))
                 Details->Render();
             fuckingsun->X.D.transluent = FALSE;
             if (bSpecial)

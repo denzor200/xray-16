@@ -216,7 +216,11 @@ public:
 
     CResourceManager() : bDeferredLoad(TRUE)
     {
+#if RENDER == R_R1 || RENDER == R_R2
         m_shader_fallback_allowed = !!strstr(Core.Params, "-lack_of_shaders");
+#else // For another renderers we should always allow fallback
+        m_shader_fallback_allowed = true;
+#endif
     }
 
     ~CResourceManager();
@@ -260,7 +264,7 @@ private:
     T& GetShaderMap();
 
     template <typename T>
-    T* CreateShader(cpcstr name, pcstr filename = nullptr, pcstr fallbackShader = nullptr, bool searchForEntryAndTarget = false);
+    T* CreateShader(cpcstr name, pcstr filename = nullptr, pcstr fallbackShader = nullptr);
 
     template <typename T>
     bool DestroyShader(const T* sh);

@@ -449,18 +449,10 @@ void CRender::reset_end()
     m_bFirstFrameAfterReset = true;
 }
 
-/*
-void CRender::OnFrame()
-{
-    Models->DeleteQueue			();
-    if (ps_r2_ls_flags.test(R2FLAG_EXP_MT_CALC))	{
-        Device.seqParallel.insert	(Device.seqParallel.begin(),
-            fastdelegate::FastDelegate0<>(&HOM,&CHOM::MT_RENDER));
-    }
-}*/
-
 void CRender::BeforeFrame()
 {
+    if (IGame_Persistent::MainMenuActiveOrLevelNotExist())
+        return;
     // MT-HOM (@front)
     TaskScheduler->AddTask("CHOM::MT_RENDER", Task::Type::Renderer,
         { &HOM, &CHOM::MT_RENDER },
@@ -470,12 +462,14 @@ void CRender::BeforeFrame()
 void CRender::OnFrame()
 {
     Models->DeleteQueue();
+    if (IGame_Persistent::MainMenuActiveOrLevelNotExist())
+        return;
     if (ps_r2_ls_flags.test(R2FLAG_EXP_MT_CALC))
     {
         // MT-details (@front)
         TaskScheduler->AddTask("CDetailManager::MT_CALC", Task::Type::Renderer,
             { Details, &CDetailManager::MT_CALC },
-            { &Device, &CRenderDevice::IsMTProcessingAllowed });
+            { &HOM, &CHOM::MT_Synced });
     }
 }
 
@@ -489,9 +483,7 @@ void CRender::MakeContextCurrent(bool acquire)
         result = SDL_GL_MakeCurrent(HW.m_hWnd, HW.m_hRC);
     else
         result = SDL_GL_MakeCurrent(nullptr, nullptr);
-#ifdef WINDOWS // FIXME: find out why Linux always fails.. But works.
     R_ASSERT2(result == 0, "Failed to switch OpenGL context");
-#endif
 }
 
 // Implementation
@@ -621,8 +613,14 @@ BOOL CRender::occ_visible(vis_data& P) { return HOM.visible(P); }
 BOOL CRender::occ_visible(sPoly& P) { return HOM.visible(P); }
 BOOL CRender::occ_visible(Fbox& P) { return HOM.visible(P); }
 
-void CRender::add_Visual(IRenderVisual* V) { add_leafs_Dynamic((dxRender_Visual*)V); }
-void CRender::add_Geometry(IRenderVisual* V) { add_Static((dxRender_Visual*)V, View->getMask()); }
+void CRender::add_Visual(IRenderable* root, IRenderVisual* V, Fmatrix& m)
+{
+    add_leafs_Dynamic(root, (dxRender_Visual*)V, m);
+}
+void CRender::add_Geometry(IRenderVisual* V, const CFrustum& view)
+{
+    add_Static((dxRender_Visual*)V, view, view.getMask());
+}
 
 void CRender::add_StaticWallmark(ref_shader& S, const Fvector& P, float s, CDB::TRI* T, Fvector* verts)
 {
@@ -672,11 +670,6 @@ void CRender::add_SkeletonWallmark(const Fmatrix* xf, IKinematics* obj, IWallMar
 void CRender::add_Occluder(Fbox2& bb_screenspace)
 {
     HOM.occlude(bb_screenspace);
-}
-
-void CRender::set_Object(IRenderable* O)
-{
-    val_pObject = O;
 }
 
 void CRender::rmNear()

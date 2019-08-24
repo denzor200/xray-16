@@ -20,6 +20,8 @@ private:
 
 public:
     Event() noexcept;
+    Event(std::nullptr_t) noexcept;
+    Event(void* event) noexcept;
     ~Event() noexcept;
 
     // Reset the event to the unsignalled state.
@@ -28,8 +30,12 @@ public:
     void Set() noexcept;
     // Wait indefinitely for the object to become signalled.
     void Wait() noexcept;
-    // Wait, with a time limit, for the object to become signalled.
+    /*! \brief Wait, with a time limit, for the object to become signalled
+
+        \return True if the object becomes signalled in the time limit, false otherwise
+    */
     bool Wait(u32 millisecondsTimeout) noexcept;
 
-    void* GetHandle() noexcept { return handle; }
+    void* GetHandle() const noexcept { return handle; }
+    bool Valid() const noexcept { return handle != nullptr; }
 };

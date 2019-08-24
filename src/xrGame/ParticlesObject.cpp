@@ -271,7 +271,7 @@ float CParticlesObject::shedule_Scale()
     return Device.vCameraPosition.distance_to(Position()) / 200.f;
 }
 
-void CParticlesObject::renderable_Render()
+void CParticlesObject::renderable_Render(IRenderable* root)
 {
     if (!psDeviceFlags.test(rsDrawParticles))
         return;
@@ -286,8 +286,7 @@ void CParticlesObject::renderable_Render()
         dwLastTime = Device.dwTimeGlobal;
     }
 
-    GEnv.Render->set_Transform(&renderable.xform);
-    GEnv.Render->add_Visual(renderable.visual);
+    GEnv.Render->add_Visual(root, renderable.visual, renderable.xform);
 }
 
 bool CParticlesObject::IsAutoRemove()

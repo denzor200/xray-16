@@ -10,8 +10,8 @@ const xr_token qpreset_token[] = {{"Minimum", 0}, {"Low", 1}, {"Default", 2}, {"
 u32 ps_r2_smapsize = 2048;
 const xr_token qsmapsize_token[] =
 {
-#ifndef MASTER_GOLD
-    { "256", 256 }, // Too bad
+#if !defined(MASTER_GOLD) || RENDER == R_R1
+    { "256", 256 }, // Too bad for R2+
     { "512", 512 }, // But works
 #endif
     { "1024", 1024 },
@@ -227,8 +227,6 @@ float ps_current_detail_height = 1.f;
 xr_token ext_quality_token[] = {{"qt_off", 0}, {"qt_low", 1}, {"qt_medium", 2},
     {"qt_high", 3}, {"qt_extreme", 4}, {nullptr, 0}};
 //-AVO
-
-Flags32 ps_actor_shadow_flags = { 0 };
 
 //- Mad Max
 float ps_r2_gloss_factor = 4.0f;
@@ -728,11 +726,9 @@ void xrRender_initconsole()
     CMD4(CCC_Float, "r__geometry_lod", &ps_r__LOD, 0.1f, 3.f); //AVO: extended from 1.2f to 3.f
     //CMD4(CCC_Float, "r__geometry_lod_pow", &ps_r__LOD_Power, 0, 2);
 
-    //CMD4(CCC_Float, "r__detail_density", &ps_r__Detail_density, .05f, 0.99f);
-    CMD4(CCC_Float, "r__detail_density", &ps_current_detail_density/*&ps_r__Detail_density*/, 0.04f, 0.6f); //AVO: extended from 0.2f to 0.04f and replaced variable
+    CMD4(CCC_Float, "r__detail_density", &ps_current_detail_density/*&ps_r__Detail_density*/, 0.1f, 0.99f);
     CMD4(CCC_detail_radius, "r__detail_radius", &ps_r__detail_radius, 49, 300);
     CMD4(CCC_Float, "r__detail_height", &ps_r__Detail_height, 1, 2);
-    CMD3(CCC_Mask, "r2_detail_shadow", &ps_r2_ls_flags, R2FLAG_DETAIL_SHADOW);
 
 #ifdef DEBUG
     CMD4(CCC_Float, "r__detail_l_ambient", &ps_r__Detail_l_ambient, .5f, .95f);
@@ -749,6 +745,7 @@ void xrRender_initconsole()
 
     CMD2(CCC_tf_Aniso, "r__tf_aniso", &ps_r__tf_Anisotropic); // {1..16}
     CMD2(CCC_tf_MipBias, "r1_tf_mipbias", &ps_r__tf_Mipbias); // {-3 +3}
+    CMD2(CCC_tf_MipBias, "r2_tf_mipbias", &ps_r__tf_Mipbias); // {-3 +3}
 
     // R1
     CMD4(CCC_Float, "r1_ssa_lod_a", &ps_r1_ssaLOD_A, 16, 96);
@@ -798,8 +795,6 @@ void xrRender_initconsole()
     CMD4(CCC_Float, "r2_zfill_depth", &ps_r2_zfill, .001f, .5f);
     CMD3(CCC_Mask, "r2_allow_r1_lights", &ps_r2_ls_flags, R2FLAG_R1LIGHTS);
 
-    CMD3(CCC_Mask, "r__actor_shadow", &ps_actor_shadow_flags, RFLAG_ACTOR_SHADOW); //Swartz
-
     //- Mad Max
     CMD4(CCC_Float, "r2_gloss_factor", &ps_r2_gloss_factor, .0f, 10.f);
 //- Mad Max
@@ -810,6 +805,7 @@ void xrRender_initconsole()
 #endif // DEBUG
 
     CMD3(CCC_Mask, "r2_sun", &ps_r2_ls_flags, R2FLAG_SUN);
+    CMD3(CCC_Mask, "r2_sun_details", &ps_r2_ls_flags, R2FLAG_SUN_DETAILS);
     CMD3(CCC_Mask, "r2_sun_focus", &ps_r2_ls_flags, R2FLAG_SUN_FOCUS);
     //CMD3(CCC_Mask, "r2_sun_static", &ps_r2_ls_flags, R2FLAG_SUN_STATIC);
     //CMD3(CCC_Mask, "r2_exp_splitscene", &ps_r2_ls_flags, R2FLAG_EXP_SPLIT_SCENE);

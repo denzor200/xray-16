@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "Event.hpp"
-#if defined(WINDOWS)
 
+Event::Event(std::nullptr_t) noexcept { handle = nullptr; }
+Event::Event(void* event) noexcept { handle = event; }
+#if defined(WINDOWS)
 Event::Event() noexcept { handle = (void*)CreateEvent(NULL, FALSE, FALSE, NULL); }
 Event::~Event() noexcept { CloseHandle(handle); }
 void Event::Reset() noexcept { ResetEvent(handle); }
@@ -52,7 +54,7 @@ void Event::Wait() noexcept
 }
 bool Event::Wait(u32 millisecondsTimeout) noexcept
 {
-    bool result = false;
+    bool result = true;
     pthread_mutex_lock(&m_id.mutex);
 
     timespec ts;
@@ -69,7 +71,7 @@ bool Event::Wait(u32 millisecondsTimeout) noexcept
         int res = pthread_cond_timedwait(&m_id.cond, &m_id.mutex, &ts);
         if(res == ETIMEDOUT)
         {
-            result = true;
+            result = m_id.signaled;
             break;
         }
     }

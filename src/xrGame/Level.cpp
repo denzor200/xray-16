@@ -624,6 +624,12 @@ void CLevel::OnRender()
 {
     GEnv.Render->BeforeWorldRender();	//--#SM+#-- +SecondVP+
 
+#ifdef DEBUG
+    CAI_Stalker* stalker = smart_cast<CAI_Stalker*>(Level().CurrentEntity());
+    if (stalker)
+        stalker->ShouldProcessOnRender(true);
+#endif
+
     inherited::OnRender();
     if (!game)
         return;
@@ -633,6 +639,7 @@ void CLevel::OnRender()
     // Device.Statistic->TEST1.End();
 
     GEnv.Render->AfterWorldRender(); //--#SM+#-- +SecondVP+
+    WorldRendered(true);
 
     if (!Device.IsAnselActive)
         HUD().RenderUI();
@@ -647,9 +654,11 @@ void CLevel::OnRender()
 #ifdef DEBUG_PRECISE_PATH
     test_precise_path();
 #endif
-    CAI_Stalker* stalker = smart_cast<CAI_Stalker*>(Level().CurrentEntity());
     if (stalker)
+    {
         stalker->OnRender();
+        stalker->ShouldProcessOnRender(false);
+    }
     if (bDebug)
     {
         for (u32 I = 0; I < Level().Objects.o_count(); I++)
