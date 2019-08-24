@@ -5,8 +5,6 @@
 #include "SoundRender_Cache.h"
 #include "xrCommon/xr_unordered_map.h"
 
-#include <mutex>
-
 class CSoundRender_Core : public ISoundManager
 {
 protected:
@@ -66,9 +64,6 @@ protected:
     SoundEnvironment_LIB* s_environment;
     CSoundRender_Environment s_user_environment;
 
-    xr_vector<std::function<void()>> m_Delegates;
-    std::mutex m_DelegatesMutex;
-
     int m_iPauseCounter;
 
 public:
@@ -106,8 +101,8 @@ public:
 
     void play(ref_sound& S, IGameObject* O, u32 flags = 0, float delay = 0.f) override;
     void play_at_pos(ref_sound& S, IGameObject* O, const Fvector& pos, u32 flags = 0, float delay = 0.f) override;
-    void play_no_feedback(ref_sound& S, IGameObject* O, u32 flags = 0, float delay = 0.f, const Fvector* pos = nullptr,
-                          const float* vol = nullptr, const float* freq = nullptr, const Fvector2* range = nullptr) override;
+    void play_no_feedback(ref_sound& S, IGameObject* O, u32 flags = 0, float delay = 0.f, Fvector* pos = nullptr,
+                          float* vol = nullptr, float* freq = nullptr, Fvector2* range = nullptr) override;
     void set_master_volume(float f) override = 0;
     void set_geometry_env(IReader* I) override;
     void set_geometry_som(IReader* I) override;
@@ -157,14 +152,6 @@ public:
     void env_load();
     void env_unload();
     void env_apply();
-
-
-    void Delegate(const std::function<void()>& delegate)
-    {
-        std::lock_guard<std::mutex> guard(m_DelegatesMutex);
-        m_Delegates.push_back(delegate);
-    }
-
 };
 
 extern CSoundRender_Core* SoundRender;

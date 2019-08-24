@@ -339,14 +339,7 @@ void CSoundRender_Core::play(ref_sound& S, IGameObject* O, u32 flags, float dela
 }
 
 void CSoundRender_Core::play_no_feedback(
-    ref_sound& S, 
-    IGameObject* O, 
-    u32 flags, 
-    float delay, 
-    const Fvector* pos, 
-    const float* vol,
-    const float* freq, 
-    const Fvector2* range)
+    ref_sound& S, IGameObject* O, u32 flags, float delay, Fvector* pos, float* vol, float* freq, Fvector2* range)
 {
     if (!bPresent || nullptr == S._handle())
         return;

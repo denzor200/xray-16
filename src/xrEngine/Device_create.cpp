@@ -41,7 +41,6 @@ void CRenderDevice::Create()
     thread_spawn(PrimaryThreadProc, "X-RAY Primary thread", 0, this);
     thread_spawn(SecondaryThreadProc, "X-Ray Secondary thread", 0, this);
     // thread_spawn(RenderThreadProc, "X-Ray Render thread", 0, this);
-    thread_spawn(SoundThreadProc, "X-RAY Sound thread", 0, this);
 
     TaskScheduler = std::make_unique<TaskManager>();
     TaskScheduler->Initialize();

@@ -34,28 +34,6 @@ void CSoundRender_Core::update(const Fvector& P, const Fvector& D, const Fvector
 
     s_emitters_u++;
 
-    // without blocking..
-    /*for (u32 pit = 0; pit < m_Delegates.size(); pit++)
-        m_Delegates[pit]();
-    m_Delegates.clear();*/
-
-    // with blocking..
-    u32 pit = 0;
-    while (true)
-    {
-        std::lock_guard<std::mutex> guard(m_DelegatesMutex);
-        if (pit < m_Delegates.size())
-        {
-            m_Delegates[pit]();
-            pit++;
-        }
-        else
-        {
-            m_Delegates.clear();
-            break;
-        }
-    }
-
     // Firstly update emitters, which are now being rendered
     // Msg("! update: r-emitters");
     for (it = 0; it < s_targets.size(); it++)
