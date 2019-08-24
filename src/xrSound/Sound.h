@@ -179,8 +179,8 @@ public:
 
     virtual void play(ref_sound& S, IGameObject* O, u32 flags = 0, float delay = 0.f) = 0;
     virtual void play_at_pos(ref_sound& S, IGameObject* O, const Fvector& pos, u32 flags = 0, float delay = 0.f) = 0;
-    virtual void play_no_feedback(ref_sound& S, IGameObject* O, u32 flags = 0, float delay = 0.f, Fvector* pos = nullptr,
-        float* vol = nullptr, float* freq = nullptr, Fvector2* range = nullptr) = 0;
+    virtual void play_no_feedback(ref_sound& S, IGameObject* O, u32 flags = 0, float delay = 0.f, const Fvector* pos = nullptr,
+        const float* vol = nullptr, const float* freq = nullptr, const Fvector2* range = nullptr) = 0;
 
     virtual void set_master_volume(float f = 1.f) = 0;
     virtual void set_geometry_env(IReader* I) = 0;
@@ -252,73 +252,59 @@ The main class representing source/emitter interface
 This class in fact just hides internals and redirect calls to
 specific sub-systems
 */
-struct ref_sound
+
+struct XRSOUND_API ref_sound
 {
     ref_sound_data_ptr _p;
 
     ref_sound() = default;
     ~ref_sound() = default;
 
-    CSound_source*     _handle() const { return _p ? _p->handle   : nullptr; }
+
+    CSound_source*     _handle() const { return _p ? _p->handle : nullptr; }
     CSound_emitter*    _feedback() const { return _p ? _p->feedback : nullptr; }
-    IGameObject*       _g_object()   { VERIFY(_p); return _p->g_object;   }
-    int                _g_type()     { VERIFY(_p); return _p->g_type;     }
-    esound_type        _sound_type() { VERIFY(_p); return _p->s_type;     }
-    CSound_UserDataPtr _g_userdata() { VERIFY(_p); return _p->g_userdata; }
 
-    bool create(pcstr name, esound_type sound_type, int game_type, bool replaceWithNoSound = true)
-    {
-        VER_SND_UNLOCKED(); return GEnv.Sound->create(*this, name, sound_type, game_type, replaceWithNoSound); 
-    }
+    float               get_length_sec() const { return _p ? _p->get_length_sec() : 0.0f; }
 
-    void attach_tail(pcstr name)
-    {
-        VER_SND_UNLOCKED(); GEnv.Sound->attach_tail(*this, name); 
-    }
 
-    void clone(const ref_sound& from, esound_type sound_type, int game_type)
-    {
-        VER_SND_UNLOCKED(); GEnv.Sound->clone(*this, from, sound_type, game_type); 
-    }
+    void create(const xr_string& name, esound_type sound_type, int game_type, bool replaceWithNoSound = true);
 
-    void destroy()
-    {
-        VER_SND_UNLOCKED(); GEnv.Sound->destroy(*this); 
-    }
+    void attach_tail(const xr_string& name);
 
-    void play(IGameObject* O, u32 flags = 0, float delay = 0.f)
-    {
-        VER_SND_UNLOCKED(); GEnv.Sound->play(*this, O, flags, delay); 
-    }
+    void clone(const ref_sound& from, esound_type sound_type, int game_type);
 
-    void play_at_pos(IGameObject* O, const Fvector& pos, u32 flags = 0, float delay = 0.f)
-    {
-        VER_SND_UNLOCKED(); GEnv.Sound->play_at_pos(*this, O, pos, flags, delay); 
-    }
+    void destroy();
 
-    void play_no_feedback(IGameObject* O, u32 flags = 0, float delay = 0.f, Fvector* pos = nullptr, float* vol = nullptr, float* freq = nullptr, Fvector2* range = nullptr)
-    {
-        VER_SND_UNLOCKED(); GEnv.Sound->play_no_feedback(*this, O, flags, delay, pos, vol, freq, range); 
-    }
+    void play(IGameObject* O, u32 flags = 0, float delay = 0.f);
 
-    void stop()                           { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->stop(false); }
-    void stop_deferred()                  { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->stop(true ); }
+    void play_at_pos(IGameObject* O, const Fvector& pos, u32 flags = 0, float delay = 0.f);
 
-    void set_position(const Fvector& pos) { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_position(pos); }
-    void set_frequency(float freq)        { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_frequency(freq); }
-    void set_range(float min, float max)  { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_range(min, max); }
-    void set_volume(float vol)            { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_volume(vol); }
-    void set_priority(float p)            { VER_SND_UNLOCKED(); if (_feedback()) _feedback()->set_priority(p); }
+    void play_no_feedback(
+        IGameObject* O,
+        u32 flags = 0,
+        float delay = 0.f,
+        const Fvector* pos = nullptr,
+        const float* vol = nullptr,
+        const float* freq = nullptr,
+        const Fvector2* range = nullptr);
+
+    void stop();
+    void stop_deferred();
+
+    // TODO: все геттеры-сеттеры должны быть на атомарных операциях
+    void set_position(const Fvector& pos) {if (_feedback()) _feedback()->set_position(pos); }
+    void set_frequency(float freq) {if (_feedback()) _feedback()->set_frequency(freq); }
+    void set_range(float min, float max) {if (_feedback()) _feedback()->set_range(min, max); }
+    void set_volume(float vol) {if (_feedback()) _feedback()->set_volume(vol); }
+    void set_priority(float p) {if (_feedback()) _feedback()->set_priority(p); }
 
     const CSound_params* get_params()
     {
-        VER_SND_UNLOCKED();
         return _feedback() ? _feedback()->get_params() : 0;
     }
 
     void set_params(CSound_params* p)
     {
-        VER_SND_UNLOCKED();
         CSound_emitter* const feedback = _feedback();
         if (feedback)
         {
@@ -329,7 +315,37 @@ struct ref_sound
         }
     }
 
-    float get_length_sec() const { return _p ? _p->get_length_sec() : 0.0f; }
+private:
+
+    void create_internal(const xr_string& name, esound_type sound_type, int game_type, bool replaceWithNoSound);
+
+    void attach_tail_internal(const xr_string& name);
+
+    void clone_internal(const ref_sound& from, esound_type sound_type, int game_type);
+
+    void destroy_internal();
+
+    void play_internal(IGameObject* O, u32 flags, float delay);
+
+    void play_at_pos_internal(IGameObject* O, const Fvector& pos, u32 flags, float delay);
+
+    void play_no_feedback_internal(
+        IGameObject* O,
+        u32 flags,
+        float delay,
+        bool has_pos,
+        const Fvector& pos,
+        bool has_vol,
+        const float& vol,
+        bool has_freq,
+        const float& freq,
+        bool has_range,
+        const Fvector2& range);
+
+
+    void stop_internal();
+    void stop_deferred_internal();
+
 };
 
 class XRSOUND_API CSound_stats_ext
